@@ -9,8 +9,10 @@ from core.document_reviewer import review_document
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 TEMP_COURSE_ID = "temp_upload"
-TEMP_ASSETS_DIR = os.path.join("assets", TEMP_COURSE_ID)
+TEMP_ASSETS_DIR = os.path.join(BASE_DIR, "assets", TEMP_COURSE_ID)
 
 # Ensure temp directory exists
 os.makedirs(TEMP_ASSETS_DIR, exist_ok=True)
