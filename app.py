@@ -1,13 +1,27 @@
 import os
 import shutil
+import traceback
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+import werkzeug.exceptions
 from werkzeug.utils import secure_filename
 from core.data_parser import parse_docx_to_html
 from core.document_reviewer import review_document
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    if isinstance(e, werkzeug.exceptions.HTTPException):
+        return e
+    app.logger.error(f"Unhandled Exception: {str(e)}")
+    app.logger.error(traceback.format_exc())
+    return jsonify({
+        "error": "Error interno no controlado",
+        "details": str(e),
+        "trace": traceback.format_exc()
+    }), 500
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,14 +53,20 @@ def api_review():
     os.makedirs(TEMP_ASSETS_DIR, exist_ok=True)
 
     try:
+        app.logger.info("--- NUEVA SUBIDA DE DOCUMENTO ---")
+        app.logger.info(f"File recibido: {file.filename}")
+        
         # Save uploaded DOCX
         filename = secure_filename(file.filename)
         docx_path = os.path.join(TEMP_ASSETS_DIR, filename)
+        app.logger.info(f"Guardando archivo en: {docx_path}")
         file.save(docx_path)
+        app.logger.info("Archivo guardado exitosamente.")
         
         # We need it to be named temp_upload.docx for our parser if it expects <course_id>.docx
         expected_docx_path = os.path.join(TEMP_ASSETS_DIR, f"{TEMP_COURSE_ID}.docx")
         if docx_path != expected_docx_path:
+            app.logger.info(f"Renombrando a: {expected_docx_path}")
             os.rename(docx_path, expected_docx_path)
 
         # 1. Parse DOCX to HTML
@@ -65,11 +85,17 @@ def api_review():
             generate_text=False
         )
 
+        app.logger.info("Documento procesado correctamente. Retornando reporte JSON.")
         return jsonify(report)
 
     except Exception as e:
-        app.logger.error(f"Error processing document: {str(e)}")
-        return jsonify({"error": f"Error interno: {str(e)}"}), 500
+        app.logger.error("!!! ERROR PROCESANDO DOCUMENTO !!!")
+        app.logger.error(f"Error: {str(e)}")
+        app.logger.error(traceback.format_exc())
+        return jsonify({
+            "error": f"Error interno: {str(e)}",
+            "trace": traceback.format_exc()
+        }), 500
         
     finally:
         # Cleanup temporary files as requested by the user
