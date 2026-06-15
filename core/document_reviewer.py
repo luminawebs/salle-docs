@@ -5,6 +5,7 @@ import logging
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def review_document(course_id: int, generate_json=True, generate_text=True):
     """
@@ -13,7 +14,7 @@ def review_document(course_id: int, generate_json=True, generate_text=True):
     Optionally saves the results to a JSON and/or text file in the course's assets folder.
     """
     logger.info(f"Iniciando revisión de documento para el curso {course_id}...")
-    base_dir = os.path.join("assets", str(course_id))
+    base_dir = os.path.join(PROJECT_ROOT, "assets", str(course_id))
     raw_html_path = os.path.join(base_dir, "raw_docx_extracted.html")
 
     report = {
